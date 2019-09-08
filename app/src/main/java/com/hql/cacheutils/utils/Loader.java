@@ -26,8 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Loader {
     private Context mContext;
     private final static String TAG = "CacheLoader";
-    private ImageMemoryCache mImageMemoryCache;
-    private ImageDiskCache mImageDiskCache;
+    private ImageMemoryCache mImageMemoryCache;//内存管理
+    private ImageDiskCache mImageDiskCache;//磁盘管理
     /**
      * 主线程handler,不要用来处理非UI线程的工作
      */
@@ -37,7 +37,6 @@ public class Loader {
             super.handleMessage(msg);
             switch (msg.what) {
                 case ACTION_UPDATE_BITMAP:
-
                     LoaderResult result = (LoaderResult) msg.obj;
                     if (result.imageView.getTag().equals(result.getUriTag())) {
                         if (null != result.bitmap) {
@@ -85,10 +84,13 @@ public class Loader {
         mImageMemoryCache = new ImageMemoryCache(mContext);
         mImageDiskCache = new ImageDiskCache(mContext);
     }
-
+    /**
+     *尝试从内存和磁盘获取图片
+     * @param url
+     */
     private Bitmap getBitmap(String path, int reqWidth, int reqHeight) {
         Bitmap bitmap = null;
-        bitmap = mImageMemoryCache.getFromMemory(path + reqWidth + reqHeight);
+        bitmap = mImageMemoryCache.getFromMemory(path + reqWidth + reqHeight);//从缓存中获取对应宽高的图片
         if (null == bitmap) {
             bitmap = mImageDiskCache.getBitmapFromDisk(path, reqWidth, reqHeight);
             if (null != bitmap) {
@@ -111,17 +113,6 @@ public class Loader {
         }
     }
 
-
-    /**
-     * 从磁盘读取并缓存
-     *
-     * @param path
-     */
-    private void downloadFromDisk(String path) {
-
-    }
-
-
     /**
      * 从磁盘读取并设置图片
      *
@@ -131,7 +122,11 @@ public class Loader {
      * @param height
      */
     public void bindBitmapFromDisk(String path, ImageView view, int width, int height) {
-
+        Bitmap bitmap = getBitmap(path, width, height);
+        if (null != bitmap) {
+            view.setImageBitmap(bitmap);
+            return;
+        }
     }
 
     /**
@@ -156,7 +151,7 @@ public class Loader {
                 LoaderResult result = new LoaderResult(view, bitmap, url);
                 mainHandler.obtainMessage(ACTION_UPDATE_BITMAP, result).sendToTarget();
                 if (null != bitmap) {
-                    mImageMemoryCache.putIntoMemory(url, bitmap);
+                    mImageMemoryCache.putIntoMemory(url + width + height, bitmap);
                 }
             }
         };

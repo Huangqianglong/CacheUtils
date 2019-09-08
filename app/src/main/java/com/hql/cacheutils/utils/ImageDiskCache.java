@@ -53,7 +53,8 @@ public class ImageDiskCache {
         Bitmap bitmap = null;
         FileInputStream fis = null;
         try {
-            DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path + reqWidth + reqHeight));
+            //DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path + reqWidth + reqHeight));
+            DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path));//从磁盘获取该URL的图片
             if (null != snapshot) {
                 fis = (FileInputStream) snapshot.getInputStream(0);
                 FileDescriptor fileDescriptor = fis.getFD();
@@ -78,18 +79,22 @@ public class ImageDiskCache {
     public Bitmap downloadIntoDisk(String path, int width, int height) {
         Bitmap bitmap = null;
         try {
-            DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
-            OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
-            boolean result = tranleUrlToStream(path, outputStream);
-            if (result) {
-                editor.commit();
-            } else {
-                editor.abort();
+           // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
+            DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+            if(null!= editor){//editor如果在下载同一个图片时，会返回空
+                OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
+                boolean result = tranleUrlToStream(path, outputStream);
+                if (result) {
+                    editor.commit();
+                } else {
+                    editor.abort();
+                }
+                mDiskLruCache.flush();
+                if(result){
+                    bitmap = getBitmapFromDisk(path, width, height);
+                }
             }
-            mDiskLruCache.flush();
-            if(result){
-                bitmap = getBitmapFromDisk(path, width, height);
-            }
+
         } catch (IOException e) {
             e.printStackTrace();
             return bitmap;
