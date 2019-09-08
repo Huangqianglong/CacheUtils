@@ -1,4 +1,4 @@
-package com.hql.cacheutils;
+package com.hql.cacheutils.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;

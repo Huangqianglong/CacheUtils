@@ -1,4 +1,4 @@
-package com.hql.cacheutils;
+package com.hql.cacheutils.utils;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

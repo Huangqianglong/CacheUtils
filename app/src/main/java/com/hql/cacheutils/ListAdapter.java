@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import com.hql.cacheutils.utils.Loader;
 
 import java.util.ArrayList;
 

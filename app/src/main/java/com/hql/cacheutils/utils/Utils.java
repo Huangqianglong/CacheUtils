@@ -1,4 +1,4 @@
-package com.hql.cacheutils;
+package com.hql.cacheutils.utils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
