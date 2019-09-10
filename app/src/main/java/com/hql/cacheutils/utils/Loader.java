@@ -86,7 +86,7 @@ public class Loader {
     }
     /**
      *尝试从内存和磁盘获取图片
-     * @param url
+     * @param
      */
     private Bitmap getBitmap(String path, int reqWidth, int reqHeight) {
         Bitmap bitmap = null;
@@ -95,6 +95,7 @@ public class Loader {
             bitmap = mImageDiskCache.getBitmapFromDisk(path, reqWidth, reqHeight);
             if (null != bitmap) {
                 Log.d(TAG, "从磁盘读取");
+                mImageMemoryCache.putIntoMemory(path+reqHeight+reqHeight,bitmap);
             }
         } else {
             Log.d(TAG, "从内存读取");
