@@ -9,6 +9,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import com.hql.cacheutils.utils.Loader;
 
 import java.util.ArrayList;
@@ -46,10 +47,11 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.VH> {
     public void onBindViewHolder(@NonNull VH vh, int i) {
         DataBean dataBean = dataList.get(i);
         vh.title.setText(dataBean.getTitle());
-        Log.d(TAG, "读取>>>>>>>>>>>isIdle"+isIdle);
+        //Log.d(TAG, "读取>>>>>>>>>>>isIdle" + isIdle);
         if (isIdle) {
             vh.icon.setTag(dataBean.getUrl());
-            mLoader.bindBitmapFromMedia(dataBean.getUrl(), vh.icon, 145, 145);
+             //mLoader.bindBitmapFromMedia(dataBean.getUrl(), vh.icon, 145, 145,false);
+            mLoader.bindBitmapFromURL(dataBean.getUrl(), vh.icon, 145, 145, true);
             //Glide.with(mContext).load(dataBean.getUrl()).into(vh.icon);
 
         } else {

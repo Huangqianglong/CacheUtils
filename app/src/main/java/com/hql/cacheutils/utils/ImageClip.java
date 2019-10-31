@@ -29,7 +29,7 @@ public class ImageClip {
         BitmapFactory.decodeFileDescriptor(descriptor, null, options);
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
-        Log.d(TAG,"输出图片大小>>width:"+  options.outWidth/options.inSampleSize+">>>heigh:"+  options.outHeight/options.inSampleSize);
+        //Log.d(TAG,"输出图片大小>>width:"+  options.outWidth/options.inSampleSize+">>>heigh:"+  options.outHeight/options.inSampleSize);
         return BitmapFactory.decodeFileDescriptor(descriptor,null,options);
     }
 
@@ -40,7 +40,7 @@ public class ImageClip {
         }
         final int height = options.outHeight;
         final int width = options.outWidth;
-        Log.d(TAG,"原图大小>>width:"+  options.outWidth+">>>heigh:"+  options.outHeight);
+        //Log.d(TAG,"原图大小>>width:"+  options.outWidth+">>>heigh:"+  options.outHeight);
         if (height > reqHeight || width > reqWidth) {
             final int halfHeight = height / 2;
             final int halfWidth = width / 2;
