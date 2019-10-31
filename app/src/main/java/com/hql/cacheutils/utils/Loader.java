@@ -10,6 +10,8 @@ import android.support.annotation.UiThread;
 import android.util.Log;
 import android.widget.ImageView;
 
+import com.hql.cacheutils.R;
+
 import java.io.IOException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -28,6 +30,7 @@ public class Loader {
     private final static String TAG = "CacheLoader";
     private ImageMemoryCache mImageMemoryCache;//内存管理
     private ImageDiskCache mImageDiskCache;//磁盘管理
+    private int defaultBitmap = -1;
     /**
      * 主线程handler,不要用来处理非UI线程的工作
      */
@@ -35,12 +38,22 @@ public class Loader {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
+            Log.d(TAG, "imageView handle msg");
             switch (msg.what) {
                 case ACTION_UPDATE_BITMAP:
                     LoaderResult result = (LoaderResult) msg.obj;
+                    Log.d(TAG, "ACTION_UPDATE_BITMAP >>>>>>>" + result);
                     if (result.imageView.getTag().equals(result.getUriTag())) {
+                        Log.d(TAG, "ACTION_UPDATE_BITMAP >>>>>>>result.bitmap:" + result.bitmap);
                         if (null != result.bitmap) {
                             result.imageView.setImageBitmap(result.bitmap);
+                        } else {
+                            result.imageView.setImageBitmap(null);
+                            if (-1 != defaultBitmap) {
+                                result.imageView.setImageResource(defaultBitmap);
+                            } else {
+                                result.imageView.setImageResource(R.drawable.ic_launcher_background);
+                            }
                         }
                     } else {
                         Log.d(TAG, "imageView 已变更，不更新图片");
@@ -84,51 +97,41 @@ public class Loader {
         mImageMemoryCache = new ImageMemoryCache(mContext);
         mImageDiskCache = new ImageDiskCache(mContext);
     }
-    /**
-     *尝试从内存和磁盘获取图片
-     * @param
-     */
-    private Bitmap getBitmap(String path, int reqWidth, int reqHeight) {
-        Bitmap bitmap = null;
-        bitmap = mImageMemoryCache.getFromMemory(path + reqWidth + reqHeight);//从缓存中获取对应宽高的图片
-        if (null == bitmap) {
-            bitmap = mImageDiskCache.getBitmapFromDisk(path, reqWidth, reqHeight);
-            if (null != bitmap) {
-                Log.d(TAG, "从磁盘读取");
-                mImageMemoryCache.putIntoMemory(path+reqHeight+reqHeight,bitmap);
-            }
-        } else {
-            Log.d(TAG, "从内存读取");
-        }
-        return bitmap;
-    }
+
 
     /**
-     * 从网络下载并保存到缓存
-     *
-     * @param url
-     */
-    private void downloadFromNetwork(String url, ImageView view) throws IOException {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            throw new RuntimeException("禁止在UI线程加载网络");
-        }
-    }
-
-    /**
-     * 从磁盘读取并设置图片
+     * 从磁盘读取mp3并设置图片
      *
      * @param path
      * @param view
      * @param width
      * @param height
      */
-    public void bindBitmapFromDisk(String path, ImageView view, int width, int height) {
-        Bitmap bitmap = getBitmap(path, width, height);
+    public void bindBitmapFromMedia(final String path, final ImageView view, final int width, final int height) {
+        Log.d(TAG, "读取多媒体专辑图");
+        Bitmap bitmap = getBitmapURL(path, width, height);
         if (null != bitmap) {
+            Log.d(TAG, "从缓存获取音频专辑");
             view.setImageBitmap(bitmap);
             return;
         }
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "没有缓存 ，读取多媒体专辑图");
+                Bitmap bitmap = mImageDiskCache.mediaAlbumIntoDisk(path, width, height);
+                LoaderResult result = new LoaderResult(view, bitmap, path);
+                mainHandler.obtainMessage(ACTION_UPDATE_BITMAP, result).sendToTarget();
+                if (null != bitmap) {
+                    mImageMemoryCache.putIntoMemory(path + width + height, bitmap);
+                }
+            }
+        };
+        THERAD_POOL.execute(runnable);
     }
+
+
+    //-w网络部分-----------------------------------
 
     /**
      * 从网络读取并设置图片
@@ -139,7 +142,7 @@ public class Loader {
      * @param height
      */
     public void bindBitmapFromURL(final String url, final ImageView view, final int width, final int height) {
-        Bitmap bitmap = getBitmap(url, width, height);
+        Bitmap bitmap = getBitmapURL(url, width, height);
         if (null != bitmap) {
             view.setImageBitmap(bitmap);
             return;
@@ -157,6 +160,37 @@ public class Loader {
             }
         };
         THERAD_POOL.execute(runnable);
+    }
+
+    /**
+     * 尝试从内存和磁盘获取图片
+     *
+     * @param
+     */
+    private Bitmap getBitmapURL(String path, int reqWidth, int reqHeight) {
+        Bitmap bitmap = null;
+        bitmap = mImageMemoryCache.getFromMemory(path + reqWidth + reqHeight);//从缓存中获取对应宽高的图片
+        if (null == bitmap) {
+            bitmap = mImageDiskCache.getBitmapFromDisk(path, reqWidth, reqHeight);
+            if (null != bitmap) {
+                Log.d(TAG, "从磁盘读取");
+                mImageMemoryCache.putIntoMemory(path + reqHeight + reqHeight, bitmap);
+            }
+        } else {
+            Log.d(TAG, "从内存读取");
+        }
+        return bitmap;
+    }
+
+    /**
+     * 从网络下载并保存到缓存
+     *
+     * @param url
+     */
+    private void downloadFromNetwork(String url, ImageView view) throws IOException {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            throw new RuntimeException("禁止在UI线程加载网络");
+        }
     }
 
     private static class LoaderResult {
@@ -190,5 +224,13 @@ public class Loader {
         public void setBitmap(Bitmap bitmap) {
             this.bitmap = bitmap;
         }
+    }
+
+    public int getDefaultBitmap() {
+        return defaultBitmap;
+    }
+
+    public void setDefaultBitmap(int defaultBitmap) {
+        this.defaultBitmap = defaultBitmap;
     }
 }

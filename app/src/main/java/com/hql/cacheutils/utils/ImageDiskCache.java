@@ -2,7 +2,9 @@ package com.hql.cacheutils.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.jakewharton.disklrucache.DiskLruCache;
@@ -76,12 +78,63 @@ public class ImageDiskCache {
         }
     }
 
+
+   // public final static String MEDIA_PATH_TAG = "tag";
+
+    /**
+     * @param path
+     * @param width
+     * @param height
+     * @return
+     */
+    public Bitmap mediaAlbumIntoDisk(String path, int width, int height) {
+        Bitmap bitmap = null;
+        MediaMetadataRetriever metadataRetriever = null;
+        try {
+            metadataRetriever = new MediaMetadataRetriever();
+            metadataRetriever.setDataSource(path);
+            byte[] bos = metadataRetriever.getEmbeddedPicture();
+            Log.d(TAG, "mediaAlbumIntoDisk path:"+path);
+            if (null != bos) {
+                // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
+                DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path ));
+                if (null != editor) {//editor如果在下载同一个图片时，会返回空
+                    OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
+                    Log.d(TAG, "mediaAlbumIntoDisk bos:"+bos.length);
+                    outputStream.write(bos);
+                    editor.commit();
+                    mDiskLruCache.flush();
+                    bitmap = getBitmapFromDisk(path , width, height);
+                }
+            } else {
+                Log.d(TAG, "mediaAlbumIntoDisk bos  null");
+                return null;
+            }
+        } catch (Exception e) {
+            metadataRetriever.release();
+            Log.e(TAG, "onBindViewHolder metadataRetriever erro: " + e.toString());
+        } finally {
+            if (null != metadataRetriever) {
+                metadataRetriever.release();
+            }
+        }
+        return bitmap;
+    }
+
+    /**
+     * 从网络下载
+     *
+     * @param path
+     * @param width
+     * @param height
+     * @return
+     */
     public Bitmap downloadIntoDisk(String path, int width, int height) {
         Bitmap bitmap = null;
         try {
-           // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
+            // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
             DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
-            if(null!= editor){//editor如果在下载同一个图片时，会返回空
+            if (null != editor) {//editor如果在下载同一个图片时，会返回空
                 OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
                 boolean result = tranleUrlToStream(path, outputStream);
                 if (result) {
@@ -90,7 +143,7 @@ public class ImageDiskCache {
                     editor.abort();
                 }
                 mDiskLruCache.flush();
-                if(result){
+                if (result) {
                     bitmap = getBitmapFromDisk(path, width, height);
                 }
             }
@@ -103,7 +156,7 @@ public class ImageDiskCache {
     }
 
     private boolean tranleUrlToStream(String path, OutputStream outputStream) {
-        Log.d(TAG,"开始下载");
+        Log.d(TAG, "开始下载");
         HttpURLConnection httpURLConnection = null;
         BufferedOutputStream bos = null;
         BufferedInputStream bis = null;
@@ -119,7 +172,7 @@ public class ImageDiskCache {
                 //设置请求报文头，设定请求数据类型
                 httpURLConnection.setRequestProperty("Connection", "Keep-Alive");
                 httpURLConnection.setRequestProperty("Content-Type", "text/plain; charset=utf-8");
-               // httpURLConnection.connect();
+                // httpURLConnection.connect();
                 //获取连接响应码，200为成功，如果为其他，均表示有问题
                 int responseCode = httpURLConnection.getResponseCode();
                 Log.d(TAG, ">>>>>>>>>>>>>>>>>>responseCode:" + responseCode);

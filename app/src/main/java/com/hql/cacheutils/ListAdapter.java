@@ -3,6 +3,7 @@ package com.hql.cacheutils;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,9 +46,10 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.VH> {
     public void onBindViewHolder(@NonNull VH vh, int i) {
         DataBean dataBean = dataList.get(i);
         vh.title.setText(dataBean.getTitle());
+        Log.d(TAG, "读取>>>>>>>>>>>isIdle"+isIdle);
         if (isIdle) {
             vh.icon.setTag(dataBean.getUrl());
-            mLoader.bindBitmapFromURL(dataBean.getUrl(), vh.icon, 145, 145);
+            mLoader.bindBitmapFromMedia(dataBean.getUrl(), vh.icon, 145, 145);
             //Glide.with(mContext).load(dataBean.getUrl()).into(vh.icon);
 
         } else {
