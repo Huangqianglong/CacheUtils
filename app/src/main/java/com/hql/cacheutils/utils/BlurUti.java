@@ -235,8 +235,6 @@ public class BlurUti {
         Bitmap bitmap = fastblur(context, sentBitmap, radius);
         Canvas canvas = new Canvas(bitmap);
         canvas.drawColor(Color.parseColor("#552D377C"));//"#662D374C"
-
-
         return bitmap;
     }
 

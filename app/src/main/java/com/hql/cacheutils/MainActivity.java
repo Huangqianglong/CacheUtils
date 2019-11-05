@@ -138,17 +138,18 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-  /*   String[] urlList = new String[]{
-             "/sdcard/Pictures/1.mp3",
-             "/sdcard/Pictures/11.mp3",
-             "/sdcard/Pictures/12.mp3"
+      /*String[] urlList = new String[]{
+             "/sdcard/Pictures/Amuro - 闲情记趣.mp3"
+             ,
+              "/sdcard/Pictures/11.mp3",
+              "/sdcard/Pictures/Braska - 我自齐天.mp3"
      };*/
 
-   /* String[] urlList = new String[]{
-            "http://img3.imgtn.bdimg.com/it/u=3361934473,3725527506&fm=26&gp=0.jpg"
-    };*/
     String[] urlList = new String[]{
             "http://img3.imgtn.bdimg.com/it/u=3361934473,3725527506&fm=26&gp=0.jpg"
+    };
+    /*String[] urlList = new String[]{
+            "http://img3.imgtn.bdimg.com/it/u=3361934473,3725527506&fm=26&gp=0.jpg"
             , "http://img3.imgtn.bdimg.com/it/u=3677209778,3519789803&fm=26&gp=0.jpg"
             , "http://img5.imgtn.bdimg.com/it/u=2884107401,3797902000&fm=26&gp=0.jpg"
             , "http://img4.imgtn.bdimg.com/it/u=4120979773,4081271083&fm=26&gp=0.jpg"
@@ -220,5 +221,5 @@ public class MainActivity extends AppCompatActivity {
             , "http://img4.imgtn.bdimg.com/it/u=3134952146,3980288478&fm=26&gp=0.jpg"
             , "http://img1.imgtn.bdimg.com/it/u=2357912857,682090914&fm=26&gp=0.jpg"
             , "http://img4.imgtn.bdimg.com/it/u=2808673875,655214047&fm=26&gp=0.jpg"
-            , "http://img5.imgtn.bdimg.com/it/u=4224769698,2746412817&fm=26&gp=0.jpg"};
+            , "http://img5.imgtn.bdimg.com/it/u=4224769698,2746412817&fm=26&gp=0.jpg"};*/
 }

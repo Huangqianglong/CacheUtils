@@ -2,6 +2,7 @@ package com.hql.cacheutils.utils;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaMetadataRetriever;
 import android.os.Environment;
 import android.util.Log;
@@ -10,11 +11,16 @@ import com.jakewharton.disklrucache.DiskLruCache;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
@@ -54,12 +60,15 @@ public class ImageDiskCache {
         Bitmap bitmap = null;
         FileInputStream fis = null;
         try {
+            Log.d(TAG, "从磁盘读取path：" + path);
+            Log.d(TAG, "从磁盘读取转换path：" + Utils.getMD5Key(path));
             //DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path + reqWidth + reqHeight));
             DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path));//从磁盘获取该URL的图片
             if (null != snapshot) {
                 fis = (FileInputStream) snapshot.getInputStream(0);
                 FileDescriptor fileDescriptor = fis.getFD();
                 bitmap = mImageClip.decodeBitmapFromInputStream(fileDescriptor, reqWidth, reqHeight);
+                Log.d(TAG, "从磁盘读取" + bitmap);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -80,11 +89,16 @@ public class ImageDiskCache {
 
 
     //---从本地文件读取--------------------------------------------------------------------
-    public Bitmap localPicIntoDisk(String path, int width, int height) {
+    public Bitmap localPicIntoDisk(String path, int width, int height, boolean blur) {
         Bitmap bitmap = null;
         try {
             // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
-            DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+            DiskLruCache.Editor editor;
+            if (blur) {
+                editor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
+            } else {
+                editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+            }
             if (null != editor) {//editor如果在下载同一个图片时，会返回空
                 OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
                 boolean result = readPicToStream(path, outputStream);
@@ -94,8 +108,13 @@ public class ImageDiskCache {
                     editor.abort();
                 }
                 mDiskLruCache.flush();
+                outputStream.close();
                 if (result) {
-                    bitmap = getBitmapFromDisk(path, width, height);
+                    if (blur) {
+                        bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
+                    } else {
+                        bitmap = getBitmapFromDisk(path, width, height);
+                    }
                 }
             }
 
@@ -131,24 +150,47 @@ public class ImageDiskCache {
      * @param height
      * @return
      */
-    public Bitmap mediaAlbumIntoDisk(String path, int width, int height) {
+    public Bitmap mediaAlbumIntoDisk(String path, int width, int height, boolean blur) {
         Bitmap bitmap = null;
         MediaMetadataRetriever metadataRetriever = null;
         try {
             metadataRetriever = new MediaMetadataRetriever();
             metadataRetriever.setDataSource(path);
+            metadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
             byte[] bos = metadataRetriever.getEmbeddedPicture();
-            Log.d(TAG, "mediaAlbumIntoDisk path:" + path);
+            Log.d(TAG, "mediaAlbumIntoDisk 读取多媒体path:" + path);
+            //将流转成图 xx
             if (null != bos) {
                 // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
-                DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+                Bitmap bitmap1 = BitmapUtil.getMusicPic(bos, width, height);
+                Bitmap bitmap2 = bitmap1;
+
+                if (blur) {
+                    bitmap2 = BlurUti.fastBlueBlur(mContext, bitmap1, 13);
+                }
+
+                DiskLruCache.Editor editor;
+                if (blur) {
+                    editor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
+                } else {
+                    editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+                }
                 if (null != editor) {//editor如果在下载同一个图片时，会返回空
                     OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
-                    Log.d(TAG, "mediaAlbumIntoDisk bos:" + bos.length);
-                    outputStream.write(bos);
-                    editor.commit();
+                    boolean result = blurToStream(bitmap2, outputStream);
+                    //outputStream.write(bos);
+                    Log.d(TAG, "虚幻图片result:" + result);
+                    if (result) {
+                        editor.commit();
+                    } else {
+                        editor.abort();
+                    }
                     mDiskLruCache.flush();
-                    bitmap = getBitmapFromDisk(path, width, height);
+                    if (blur) {
+                        bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
+                    } else {
+                        bitmap = getBitmapFromDisk(path, width, height);
+                    }
                     outputStream.close();
                 }
             } else {
@@ -170,45 +212,107 @@ public class ImageDiskCache {
 //-----------------------------------------------------------------------
 
     /**
-     * 从网络下载
+     * 从网络文件解析
      *
      * @param path
      * @param width
      * @param height
      * @return
      */
-    public Bitmap downloadIntoDisk(String path, int width, int height) {
+    public Bitmap downloadIntoDisk(String path, int width, int height, boolean blur) {
         Bitmap bitmap = null;
         try {
-            // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
-            DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
-            if (null != editor) {//editor如果在下载同一个图片时，会返回空
-                OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
-                boolean result = tranleUrlToStream(path, outputStream);
-                if (result) {
+            DiskLruCache.Editor editor = null;
+            Object result[] =null;
+            OutputStream outputStream = null;
+            OutputStream bulrOutputStream = null;
+            editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+            if (null != editor) {  //editor如果在下载同一个图片时，会返回空
+                outputStream = editor.newOutputStream(CACHE_INDEX);
+                result = tranleUrlToStream(path, outputStream, blur);
+
+                if ((boolean) result[0]) {
                     editor.commit();
                 } else {
                     editor.abort();
                 }
-                mDiskLruCache.flush();
-                if (result) {
+
+
+                if (blur) {
+                    DiskLruCache.Editor blurEditor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
+                    if (null != blurEditor) {
+                        Bitmap bitmap1 = (Bitmap) result[1];
+                        Log.d(TAG, "blurBitmap >>>>>>>>"+bitmap1);
+                        bulrOutputStream = blurEditor.newOutputStream(CACHE_INDEX);
+                        Bitmap blurBitmap = BlurUti.fastBlueBlur(mContext,bitmap1, 13);
+
+                        boolean resultBlur = blurToStream(blurBitmap, bulrOutputStream);
+                        //outputStream.write(bos);
+                        Log.d(TAG, "downloadIntoDisk 虚幻图片result:" + result);
+                        if (resultBlur) {
+                            blurEditor.commit();
+                        } else {
+                            blurEditor.abort();
+                        }
+                        // bitmap1 = null;
+                        if (null != bulrOutputStream) {
+                            bulrOutputStream.close();
+                        }
+                    }
+                }
+            }
+            if (null != outputStream) {
+                outputStream.close();
+            }
+
+            mDiskLruCache.flush();
+            Log.d(TAG, "downloadIntoDisk 下载结果:" + (boolean)result[0]);
+           if ((boolean)result[0]) {
+                if (blur) {
+                    Log.d(TAG, "downloadIntoDisk虚化 下载完成重新从磁盘读取:" + (boolean)result[0]);
+                    bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
+                } else {
+                    Log.d(TAG, "downloadIntoDisk不虚化 下载完成重新从磁盘读取:" + (boolean)result[0]);
                     bitmap = getBitmapFromDisk(path, width, height);
                 }
             }
-
-        } catch (SocketTimeoutException e) {
+        } catch (
+                SocketTimeoutException e) {
             e.printStackTrace();
-        } catch (IOException e) {
+        } catch (
+                IOException e) {
             e.printStackTrace();
             return bitmap;
-        } catch (Exception e) {
+        } catch (
+                Exception e) {
             e.printStackTrace();
         }
         return bitmap;
     }
 
-    private boolean tranleUrlToStream(String path, OutputStream outputStream) throws Exception {
+    public InputStream parse(OutputStream out) throws Exception {
+       /* ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        //转成对象输出流
+        ObjectOutputStream oos = new ObjectOutputStream(bos);
+        String fosStr = out.toString();
+        //将对象写入对象输出流
+        oos.writeObject(fosStr);
+
+//将二进制数组转成输入流
+        byte[] bytes = bos.toByteArray();
+        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+        Log.d(TAG,"输入流大小"+bytes.length);
+        oos.close();
+        return bis;*/
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos = (ByteArrayOutputStream) out;
+        final ByteArrayInputStream swapStream = new ByteArrayInputStream(baos.toByteArray());
+        return swapStream;
+    }
+
+    private Object[] tranleUrlToStream(String path, OutputStream outputStream, boolean bulr) throws Exception {
         Log.d(TAG, "开始下载");
+        Object[] result = new Object[2];
         HttpURLConnection httpURLConnection = null;
         BufferedOutputStream bos = null;
         BufferedInputStream bis = null;
@@ -230,14 +334,21 @@ public class ImageDiskCache {
             Log.d(TAG, ">>>>>>>>>>>>>>>>>>responseCode:" + responseCode);
             if (HttpURLConnection.HTTP_OK == responseCode) {
                 bis = new BufferedInputStream(httpURLConnection.getInputStream());
+                if (bulr) {
+                    Log.d(TAG,">>>>转换图片");
+                    result[1] = BitmapFactory.decodeStream(bis);
+                }
                 bos = new BufferedOutputStream(outputStream);
                 int b;
                 while ((b = bis.read()) != -1) {
                     bos.write(b);
                 }
+
+                result[0] = true;
+
                 bis.close();
                 bos.close();
-                return true;
+                return result;
             }
         }
 //        } catch (MalformedURLException e) {
@@ -252,7 +363,7 @@ public class ImageDiskCache {
             httpURLConnection.disconnect();
         }
         //}
-        return false;
+        return result;
     }
 
     private File getDiskCacheDir(Context context, String uniqueName) {
@@ -279,6 +390,7 @@ public class ImageDiskCache {
 
         try {
             Log.d(TAG, "保存到磁盘:" + path);
+            //Log.d(TAG, "保存到磁盘转换:" + Utils.getMD5Key(path));
             // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
             DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
             if (null != editor) {//editor如果在下载同一个图片时，会返回空
@@ -298,13 +410,22 @@ public class ImageDiskCache {
 
     }
 
+    /**
+     * 把bitmap写入流
+     *
+     * @param bitmap1
+     * @param outputStream
+     * @return
+     */
     private boolean blurToStream(Bitmap bitmap1, OutputStream outputStream) {
-        int bytes = bitmap1.getByteCount();
-        ByteBuffer buffer = ByteBuffer.allocate(bytes);
-        bitmap1.copyPixelsToBuffer(buffer); //Move the byte data to the buffer
-        byte[] data = buffer.array();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap1.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        byte[] data = baos.toByteArray();
+
         try {
+            Log.d(TAG, "blurToStream >>>" + data.length);
             outputStream.write(data);
+            baos.close();
             return true;
         } catch (IOException e) {
             e.printStackTrace();
@@ -313,4 +434,10 @@ public class ImageDiskCache {
     }
 
     //---bitmap转虚化end-----------------------------------
+
+    //---输入流写入start-----------------------------------
+    private void streamToDisk(byte[] data, boolean blur) {
+
+    }
+    //---输入流写入end-----------------------------------
 }

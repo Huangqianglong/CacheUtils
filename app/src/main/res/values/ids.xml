@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="bitmap_origin"/>
+    <item type="id" name="bitmap_blur"/>
+    <item type="id" name="bitmap_path"/>
+</resources>
