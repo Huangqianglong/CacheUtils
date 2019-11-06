@@ -152,25 +152,13 @@ public class ImageDiskCache {
             byte[] bos = metadataRetriever.getEmbeddedPicture();
             Log.d(TAG, "mediaAlbumIntoDisk 读取多媒体path:" + path);
             if (null != bos) {
-                // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
                 bitmap = BitmapUtil.getMusicPic(bos, width, height);
-//                Bitmap bitmap2 = bitmap1;
-//
-//                if (blur) {
-//                    bitmap2 = BlurUti.fastBlueBlur(mContext, bitmap1, 13);
-//                }
 
                 DiskLruCache.Editor editor;
-//                if (blur) {
-//                    editor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
-//                } else {
-//                    editor = mDiskLruCache.edit(Utils.getMD5Key(path));
-//                }
                 editor = mDiskLruCache.edit(Utils.getMD5Key(path));
                 if (null != editor) {//editor如果在下载同一个图片时，会返回空
                     OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
                     boolean result = blurToStream(bitmap, outputStream);
-                    //outputStream.write(bos);
                     Log.d(TAG, "虚幻图片result:" + result);
                     if (result) {
                         editor.commit();
@@ -178,11 +166,6 @@ public class ImageDiskCache {
                         editor.abort();
                     }
                     mDiskLruCache.flush();
-//                    if (blur) {
-//                        bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
-//                    } else {
-//                    bitmap = getBitmapFromDisk(path, width, height);
-                    //                  }
                     outputStream.close();
                 }
             } else {
@@ -254,26 +237,6 @@ public class ImageDiskCache {
         return bitmap;
     }
 
-    public InputStream parse(OutputStream out) throws Exception {
-       /* ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        //转成对象输出流
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        String fosStr = out.toString();
-        //将对象写入对象输出流
-        oos.writeObject(fosStr);
-
-//将二进制数组转成输入流
-        byte[] bytes = bos.toByteArray();
-        ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
-        Log.d(TAG,"输入流大小"+bytes.length);
-        oos.close();
-        return bis;*/
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos = (ByteArrayOutputStream) out;
-        final ByteArrayInputStream swapStream = new ByteArrayInputStream(baos.toByteArray());
-        return swapStream;
-    }
-
     private boolean tranleUrlToStream(String path, OutputStream outputStream) throws Exception {
         Log.d(TAG, "开始下载 path:" + path);
         //Object[] result = new Object[2];
@@ -313,18 +276,9 @@ public class ImageDiskCache {
                 return true;
             }
         }
-//        } catch (MalformedURLException e) {
-//            e.printStackTrace();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-        // finally {
         if (null != httpURLConnection) {
             httpURLConnection.disconnect();
         }
-        //}
         return false;
     }
 
@@ -393,24 +347,4 @@ public class ImageDiskCache {
         }
     }
 
-    //---bitmap转虚化end-----------------------------------
-
-    //---图片保写入磁盘start-----------------------------------
-//    public void saveIntoDisk(String path,Bitmap bitmap){
-//        try {
-//            DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
-//            OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
-//            boolean result = blurToStream(bitmap, outputStream);
-//            if (result) {
-//                editor.commit();
-//            } else {
-//                editor.abort();
-//            }
-//            mDiskLruCache.flush();
-//            outputStream.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//    }
-    //---图片保写入磁盘end-----------------------------------
 }
