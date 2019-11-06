@@ -110,10 +110,12 @@ public class BitmapUtil {
                 if (!TextUtils.isEmpty(bos)) {
                     result = getMusicPic(bos, requestSize, requestSize);
                 } else {
-                    result = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher_background);
+                    result = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
                 }
             } else {
-                result = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_launcher_background);
+
+                result = BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher);
+                Log.e("BitmapUtil", "getFileBitmap getFileBitmap  获取默认图片  : "+result );
             }
 
             //LogUtil.d("BitmapUtil", "getFileBitmap  >>>>>>>result:" + result);
@@ -130,6 +132,7 @@ public class BitmapUtil {
                 return result;
             }
         }
+        Log.e("BitmapUtil", "getFileBitmap result  : "+result );
         return result;
     }
 

@@ -50,8 +50,8 @@ public class ListAdapter extends RecyclerView.Adapter<ListAdapter.VH> {
         //Log.d(TAG, "读取>>>>>>>>>>>isIdle" + isIdle);
         if (isIdle) {
             vh.icon.setTag(dataBean.getUrl());
-             //mLoader.bindBitmapFromMedia(dataBean.getUrl(), vh.icon, 145, 145,false);
-            mLoader.bindBitmapFromURL(dataBean.getUrl(), vh.icon, 145, 145, false);
+             mLoader.bindBitmapFromMedia(dataBean.getUrl(), vh.icon, 145, 145,false);
+            //mLoader.bindBitmapFromURL(dataBean.getUrl(), vh.icon, 145, 145, true);
             //Glide.with(mContext).load(dataBean.getUrl()).into(vh.icon);
 
         } else {

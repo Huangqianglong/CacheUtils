@@ -138,16 +138,16 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-      /*String[] urlList = new String[]{
+     String[] urlList = new String[]{
              "/sdcard/Pictures/Amuro - 闲情记趣.mp3"
-             ,
+             /*,
               "/sdcard/Pictures/11.mp3",
-              "/sdcard/Pictures/Braska - 我自齐天.mp3"
-     };*/
+              "/sdcard/Pictures/Braska - 我自齐天.mp3"*/
+     };
 
-    String[] urlList = new String[]{
+  /*  String[] urlList = new String[]{
             "http://img3.imgtn.bdimg.com/it/u=3361934473,3725527506&fm=26&gp=0.jpg"
-    };
+    };*/
     /*String[] urlList = new String[]{
             "http://img3.imgtn.bdimg.com/it/u=3361934473,3725527506&fm=26&gp=0.jpg"
             , "http://img3.imgtn.bdimg.com/it/u=3677209778,3519789803&fm=26&gp=0.jpg"

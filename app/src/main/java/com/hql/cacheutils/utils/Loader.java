@@ -32,6 +32,8 @@ public class Loader {
     private ImageDiskCache mImageDiskCache;//磁盘管理
     private int defaultBitmap = -1;
     private boolean saveBlur = true;
+    private Bitmap mDefaultBlurBitmap;
+    private Bitmap mDefaultBitmap;
     /**
      * 主线程handler,不要用来处理非UI线程的工作
      */
@@ -123,7 +125,7 @@ public class Loader {
                 Bitmap bitmap = mImageDiskCache.localPicIntoDisk(path, width, height);
                 if (saveBlur) {
                     Bitmap bitmap1 = BlurUti.fastBlueBlur(mContext, bitmap, 13);
-                    mImageDiskCache.saveBlurBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG, bitmap1);
+                    mImageDiskCache.saveBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG, bitmap1);
                     putIntoMenmery(path + ImageDiskCache.BLUR_TAG + width + height, bitmap);
                 }
 
@@ -171,7 +173,7 @@ public class Loader {
                 Bitmap bitmap = mImageDiskCache.mediaAlbumIntoDisk(path, width, height);
                 if (saveBlur) {
                     Bitmap bitmap1 = BlurUti.fastBlueBlur(mContext, bitmap, 13);
-                    mImageDiskCache.saveBlurBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG, bitmap1);
+                    mImageDiskCache.saveBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG, bitmap1);
                     putIntoMenmery(path + ImageDiskCache.BLUR_TAG + width + height, bitmap);
                 }
                 LoaderResult result = new LoaderResult(view, bitmap, path);
@@ -246,15 +248,15 @@ public class Loader {
                 switch (type) {
                     case TYPE_NET:
                         Log.d(TAG, "从网络读取");
-                        bitmap = mImageDiskCache.downloadIntoDisk(path, width, height, blur);
+                        bitmap = mImageDiskCache.downloadIntoDisk(path, width, height);
                         break;
                     case TYPE_MEDIA:
                         Log.d(TAG, "从音频文件读取");
-                        bitmap = mImageDiskCache.mediaAlbumIntoDisk(path, width, height, blur);
+                        bitmap = mImageDiskCache.mediaAlbumIntoDisk(path, width, height);
                         break;
                     case TYPE_PIC:
                         Log.d(TAG, "从本地图片读取");
-                        bitmap = mImageDiskCache.localPicIntoDisk(path, width, height, blur);
+                        bitmap = mImageDiskCache.localPicIntoDisk(path, width, height);
                         break;
                     default:
                         break;
@@ -262,17 +264,31 @@ public class Loader {
 
 
                 Bitmap bitmapBlur = null;
-                if (blur) {
-                    if (null != bitmap) {
+                if (saveBlur) {
+                    if (null == bitmap) {
+                        if (null == mDefaultBitmap) {
+                            mDefaultBitmap = BitmapUtil.getFileBitmap(mContext, null, 468);
+                            Log.d(TAG, ">>>>>mDefaultBitmap：" + mDefaultBitmap);
+                            mDefaultBlurBitmap = BlurUti.fastBlueBlur(mContext, mDefaultBitmap, 13);
+                        }
+                        bitmapBlur = mDefaultBlurBitmap;
+                        if (type != TYPE_NET) {
+                            mImageDiskCache.saveBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG + width + height, bitmapBlur);
+                        }
+                    } else {
                         bitmapBlur = BlurUti.fastBlueBlur(mContext, bitmap, 13);
+                        mImageDiskCache.saveBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG + width + height, bitmapBlur);
+
                     }
+
+
                 }
                 //处理显示图片
                 LoaderResult result = null;
                 if (blur) {
                     result = new LoaderResult(view, bitmapBlur, path);
                     if (null != bitmapBlur) {
-                        putIntoMenmery(path + width + height, bitmapBlur);
+                        putIntoMenmery(path + ImageDiskCache.BLUR_TAG + width + height, bitmapBlur);
                     }
                 } else {
                     result = new LoaderResult(view, bitmap, path);
@@ -290,7 +306,7 @@ public class Loader {
                         if (null == bitmapBlur) {
                             bitmapBlur = BlurUti.fastBlueBlur(mContext, bitmap, 13);
                         }
-                        mImageDiskCache.saveBlurBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG + ImageDiskCache.BLUR_TAG, bitmapBlur);
+                        mImageDiskCache.saveBitmapIntoDisk(path + ImageDiskCache.BLUR_TAG + ImageDiskCache.BLUR_TAG, bitmapBlur);
                     }
                 }*/
             }
@@ -306,7 +322,7 @@ public class Loader {
     private Bitmap getBitmapURL(String path, int reqWidth, int reqHeight) {
         Bitmap bitmap = null;
         Log.d(TAG, "获取图片：" + path + ">>" + reqWidth + reqHeight);
-        bitmap = mImageMemoryCache.getFromMemory(path + reqWidth + reqHeight);//从缓存中获取对应宽高的图片
+        bitmap = mImageMemoryCache.getFromMemory(path + reqWidth + reqHeight);//从缓存中获取对应宽高的图片  pathBlurWidthHeight
         if (null == bitmap) {
             bitmap = mImageDiskCache.getBitmapFromDisk(path, reqWidth, reqHeight);
             if (null != bitmap) {

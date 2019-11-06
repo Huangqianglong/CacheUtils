@@ -61,9 +61,9 @@ public class ImageDiskCache {
         FileInputStream fis = null;
         try {
             Log.d(TAG, "从磁盘读取path：" + path);
-            Log.d(TAG, "从磁盘读取转换path：" + Utils.getMD5Key(path));
+            Log.d(TAG, "从磁盘读取转换path：" + Utils.getMD5Key(path + reqWidth + reqHeight));
             //DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path + reqWidth + reqHeight));
-            DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path));//从磁盘获取该URL的图片
+            DiskLruCache.Snapshot snapshot = mDiskLruCache.get(Utils.getMD5Key(path + reqWidth + reqHeight));//从磁盘获取该URL的图片
             if (null != snapshot) {
                 fis = (FileInputStream) snapshot.getInputStream(0);
                 FileDescriptor fileDescriptor = fis.getFD();
@@ -89,16 +89,12 @@ public class ImageDiskCache {
 
 
     //---从本地文件读取--------------------------------------------------------------------
-    public Bitmap localPicIntoDisk(String path, int width, int height, boolean blur) {
+    public Bitmap localPicIntoDisk(String path, int width, int height) {
         Bitmap bitmap = null;
         try {
             // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
             DiskLruCache.Editor editor;
-            if (blur) {
-                editor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
-            } else {
-                editor = mDiskLruCache.edit(Utils.getMD5Key(path));
-            }
+            editor = mDiskLruCache.edit(Utils.getMD5Key(path));
             if (null != editor) {//editor如果在下载同一个图片时，会返回空
                 OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
                 boolean result = readPicToStream(path, outputStream);
@@ -110,11 +106,7 @@ public class ImageDiskCache {
                 mDiskLruCache.flush();
                 outputStream.close();
                 if (result) {
-                    if (blur) {
-                        bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
-                    } else {
-                        bitmap = getBitmapFromDisk(path, width, height);
-                    }
+                    bitmap = getBitmapFromDisk(path, width, height);
                 }
             }
 
@@ -150,7 +142,7 @@ public class ImageDiskCache {
      * @param height
      * @return
      */
-    public Bitmap mediaAlbumIntoDisk(String path, int width, int height, boolean blur) {
+    public Bitmap mediaAlbumIntoDisk(String path, int width, int height) {
         Bitmap bitmap = null;
         MediaMetadataRetriever metadataRetriever = null;
         try {
@@ -159,25 +151,25 @@ public class ImageDiskCache {
             metadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
             byte[] bos = metadataRetriever.getEmbeddedPicture();
             Log.d(TAG, "mediaAlbumIntoDisk 读取多媒体path:" + path);
-            //将流转成图 xx
             if (null != bos) {
                 // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
-                Bitmap bitmap1 = BitmapUtil.getMusicPic(bos, width, height);
-                Bitmap bitmap2 = bitmap1;
-
-                if (blur) {
-                    bitmap2 = BlurUti.fastBlueBlur(mContext, bitmap1, 13);
-                }
+                bitmap = BitmapUtil.getMusicPic(bos, width, height);
+//                Bitmap bitmap2 = bitmap1;
+//
+//                if (blur) {
+//                    bitmap2 = BlurUti.fastBlueBlur(mContext, bitmap1, 13);
+//                }
 
                 DiskLruCache.Editor editor;
-                if (blur) {
-                    editor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
-                } else {
-                    editor = mDiskLruCache.edit(Utils.getMD5Key(path));
-                }
+//                if (blur) {
+//                    editor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
+//                } else {
+//                    editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+//                }
+                editor = mDiskLruCache.edit(Utils.getMD5Key(path));
                 if (null != editor) {//editor如果在下载同一个图片时，会返回空
                     OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
-                    boolean result = blurToStream(bitmap2, outputStream);
+                    boolean result = blurToStream(bitmap, outputStream);
                     //outputStream.write(bos);
                     Log.d(TAG, "虚幻图片result:" + result);
                     if (result) {
@@ -186,11 +178,11 @@ public class ImageDiskCache {
                         editor.abort();
                     }
                     mDiskLruCache.flush();
-                    if (blur) {
-                        bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
-                    } else {
-                        bitmap = getBitmapFromDisk(path, width, height);
-                    }
+//                    if (blur) {
+//                        bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
+//                    } else {
+//                    bitmap = getBitmapFromDisk(path, width, height);
+                    //                  }
                     outputStream.close();
                 }
             } else {
@@ -219,46 +211,21 @@ public class ImageDiskCache {
      * @param height
      * @return
      */
-    public Bitmap downloadIntoDisk(String path, int width, int height, boolean blur) {
+    public Bitmap downloadIntoDisk(String path, int width, int height) {
         Bitmap bitmap = null;
         try {
             DiskLruCache.Editor editor = null;
-            Object result[] =null;
+            boolean result = false;
             OutputStream outputStream = null;
-            OutputStream bulrOutputStream = null;
-            editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+            editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
             if (null != editor) {  //editor如果在下载同一个图片时，会返回空
                 outputStream = editor.newOutputStream(CACHE_INDEX);
-                result = tranleUrlToStream(path, outputStream, blur);
+                result = tranleUrlToStream(path, outputStream);
 
-                if ((boolean) result[0]) {
+                if (result) {
                     editor.commit();
                 } else {
                     editor.abort();
-                }
-
-
-                if (blur) {
-                    DiskLruCache.Editor blurEditor = mDiskLruCache.edit(Utils.getMD5Key(path + BLUR_TAG));
-                    if (null != blurEditor) {
-                        Bitmap bitmap1 = (Bitmap) result[1];
-                        Log.d(TAG, "blurBitmap >>>>>>>>"+bitmap1);
-                        bulrOutputStream = blurEditor.newOutputStream(CACHE_INDEX);
-                        Bitmap blurBitmap = BlurUti.fastBlueBlur(mContext,bitmap1, 13);
-
-                        boolean resultBlur = blurToStream(blurBitmap, bulrOutputStream);
-                        //outputStream.write(bos);
-                        Log.d(TAG, "downloadIntoDisk 虚幻图片result:" + result);
-                        if (resultBlur) {
-                            blurEditor.commit();
-                        } else {
-                            blurEditor.abort();
-                        }
-                        // bitmap1 = null;
-                        if (null != bulrOutputStream) {
-                            bulrOutputStream.close();
-                        }
-                    }
                 }
             }
             if (null != outputStream) {
@@ -266,15 +233,12 @@ public class ImageDiskCache {
             }
 
             mDiskLruCache.flush();
-            Log.d(TAG, "downloadIntoDisk 下载结果:" + (boolean)result[0]);
-           if ((boolean)result[0]) {
-                if (blur) {
-                    Log.d(TAG, "downloadIntoDisk虚化 下载完成重新从磁盘读取:" + (boolean)result[0]);
-                    bitmap = getBitmapFromDisk(path + BLUR_TAG, width, height);
-                } else {
-                    Log.d(TAG, "downloadIntoDisk不虚化 下载完成重新从磁盘读取:" + (boolean)result[0]);
-                    bitmap = getBitmapFromDisk(path, width, height);
-                }
+            Log.d(TAG, "downloadIntoDisk 下载结果:" + result);
+            if (result) {
+                Log.d(TAG, "downloadIntoDisk不虚化 下载完成重新从磁盘读取:" + result);
+                Log.d(TAG, "downloadIntoDisk 写入磁盘文件名:" + Utils.getMD5Key(path + width + height));
+                bitmap = getBitmapFromDisk(path, width, height);
+                Log.d(TAG, "downloadIntoDisk 下载结果读取:" + result);
             }
         } catch (
                 SocketTimeoutException e) {
@@ -310,9 +274,9 @@ public class ImageDiskCache {
         return swapStream;
     }
 
-    private Object[] tranleUrlToStream(String path, OutputStream outputStream, boolean bulr) throws Exception {
-        Log.d(TAG, "开始下载");
-        Object[] result = new Object[2];
+    private boolean tranleUrlToStream(String path, OutputStream outputStream) throws Exception {
+        Log.d(TAG, "开始下载 path:" + path);
+        //Object[] result = new Object[2];
         HttpURLConnection httpURLConnection = null;
         BufferedOutputStream bos = null;
         BufferedInputStream bis = null;
@@ -334,21 +298,19 @@ public class ImageDiskCache {
             Log.d(TAG, ">>>>>>>>>>>>>>>>>>responseCode:" + responseCode);
             if (HttpURLConnection.HTTP_OK == responseCode) {
                 bis = new BufferedInputStream(httpURLConnection.getInputStream());
-                if (bulr) {
-                    Log.d(TAG,">>>>转换图片");
-                    result[1] = BitmapFactory.decodeStream(bis);
-                }
+                Log.d(TAG, ">>>>转换图片");
+                //result[1] = BitmapFactory.decodeStream(bis);
                 bos = new BufferedOutputStream(outputStream);
                 int b;
                 while ((b = bis.read()) != -1) {
                     bos.write(b);
                 }
 
-                result[0] = true;
+                // result[0] = true;
 
                 bis.close();
                 bos.close();
-                return result;
+                return true;
             }
         }
 //        } catch (MalformedURLException e) {
@@ -363,7 +325,7 @@ public class ImageDiskCache {
             httpURLConnection.disconnect();
         }
         //}
-        return result;
+        return false;
     }
 
     private File getDiskCacheDir(Context context, String uniqueName) {
@@ -386,16 +348,15 @@ public class ImageDiskCache {
      * @param path
      * @param bitmap
      */
-    public void saveBlurBitmapIntoDisk(String path, Bitmap bitmap) {
+    public void saveBitmapIntoDisk(String path, Bitmap bitmap) {
 
         try {
             Log.d(TAG, "保存到磁盘:" + path);
-            //Log.d(TAG, "保存到磁盘转换:" + Utils.getMD5Key(path));
-            // DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path + width + height));
             DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
             if (null != editor) {//editor如果在下载同一个图片时，会返回空
                 OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
                 boolean result = blurToStream(bitmap, outputStream);
+                Log.d(TAG, "保存到磁盘 结果:" + result);
                 if (result) {
                     editor.commit();
                 } else {
@@ -403,7 +364,6 @@ public class ImageDiskCache {
                 }
                 mDiskLruCache.flush();
             }
-
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -435,9 +395,22 @@ public class ImageDiskCache {
 
     //---bitmap转虚化end-----------------------------------
 
-    //---输入流写入start-----------------------------------
-    private void streamToDisk(byte[] data, boolean blur) {
-
-    }
-    //---输入流写入end-----------------------------------
+    //---图片保写入磁盘start-----------------------------------
+//    public void saveIntoDisk(String path,Bitmap bitmap){
+//        try {
+//            DiskLruCache.Editor editor = mDiskLruCache.edit(Utils.getMD5Key(path));
+//            OutputStream outputStream = editor.newOutputStream(CACHE_INDEX);
+//            boolean result = blurToStream(bitmap, outputStream);
+//            if (result) {
+//                editor.commit();
+//            } else {
+//                editor.abort();
+//            }
+//            mDiskLruCache.flush();
+//            outputStream.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//    }
+    //---图片保写入磁盘end-----------------------------------
 }
